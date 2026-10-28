@@ -1,0 +1,47 @@
+:root {
+  --bg: #0b0f14;
+  --panel: #121923;
+  --border: #1f2a37;
+  --accent: #00e676;
+  --crit: #ff3b4e;
+  --high: #ff8a1f;
+  --mid: #ffd23f;
+  --low: #3fa7ff;
+}
+
+body {
+  background: var(--bg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.app-header { background: #0e141c; border-color: var(--border) !important; }
+
+.brand { font-family: "Consolas", "Courier New", monospace; color: var(--accent); letter-spacing: .5px; }
+
+.panel { background: var(--panel); border: 1px solid var(--border); }
+.panel .card-header { background: transparent; border-bottom: 1px solid var(--border); font-family: "Consolas", monospace; color: var(--accent); }
+
+.form-control, .form-select { background-color: #0d131b; border-color: var(--border); }
+.form-control:focus, .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 .2rem rgba(0, 230, 118, .15); }
+
+/* Tarjeta de tarea */
+.task-card { background: #0d131b; border: 1px solid var(--border); border-left: 5px solid var(--low); border-radius: .5rem; padding: 1rem; transition: transform .15s; }
+.task-card:hover { transform: translateY(-2px); }
+.task-card.sev-critica { border-left-color: var(--crit); }
+.task-card.sev-alta { border-left-color: var(--high); }
+.task-card.sev-media { border-left-color: var(--mid); }
+.task-card.sev-baja { border-left-color: var(--low); }
+.task-card.done { opacity: .55; }
+.task-card.done .task-title { text-decoration: line-through; }
+
+.task-title { font-weight: 600; word-break: break-word; }
+.task-desc { color: #9aa7b5; font-size: .9rem; word-break: break-word; }
+.task-meta { font-size: .8rem; color: #8392a3; }
+.ref-tag { font-family: "Consolas", monospace; background: #1a2430; padding: .1rem .4rem; border-radius: .25rem; color: var(--accent); }
+
+.badge-sev-critica { background: var(--crit); }
+.badge-sev-alta { background: var(--high); color: #111; }
+.badge-sev-media { background: var(--mid); color: #111; }
+.badge-sev-baja { background: var(--low); color: #111; }
+
+@media (max-width: 575.98px) { .task-card { padding: .85rem; } }
