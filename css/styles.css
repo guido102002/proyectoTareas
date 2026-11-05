@@ -39,9 +39,15 @@ body {
 .task-meta { font-size: .8rem; color: #8392a3; }
 .ref-tag { font-family: "Consolas", monospace; background: #1a2430; padding: .1rem .4rem; border-radius: .25rem; color: var(--accent); }
 
+/* Etiquetas de severidad */
 .badge-sev-critica { background: var(--crit); }
 .badge-sev-alta { background: var(--high); color: #111; }
 .badge-sev-media { background: var(--mid); color: #111; }
 .badge-sev-baja { background: var(--low); color: #111; }
+
+/* Etiquetas de estado */
+.badge-status-pendiente { background: #6c757d; }
+.badge-status-en-proceso { background: #0dcaf0; color: #111; }
+.badge-status-finalizada { background: #198754; }
 
 @media (max-width: 575.98px) { .task-card { padding: .85rem; } }
