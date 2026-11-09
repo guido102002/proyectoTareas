@@ -25,14 +25,25 @@ body {
 .form-control:focus, .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 .2rem rgba(0, 230, 118, .15); }
 
 /* Tarjeta de tarea */
-.task-card { background: #0d131b; border: 1px solid var(--border); border-left: 5px solid var(--low); border-radius: .5rem; padding: 1rem; transition: transform .15s; }
+.task-card { background: #0d131b; border: 1px solid var(--border); border-left: 5px solid var(--low); border-radius: .5rem; padding: 1rem; transition: transform .15s, background-color .25s, border-color .25s, opacity .25s; }
 .task-card:hover { transform: translateY(-2px); }
 .task-card.sev-critica { border-left-color: var(--crit); }
 .task-card.sev-alta { border-left-color: var(--high); }
 .task-card.sev-media { border-left-color: var(--mid); }
 .task-card.sev-baja { border-left-color: var(--low); }
-.task-card.done { opacity: .55; }
-.task-card.done .task-title { text-decoration: line-through; }
+
+/*  borde verde + fondo tintado + tachado + ícono  */
+.task-card.done,
+.task-card.done.sev-critica,
+.task-card.done.sev-alta,
+.task-card.done.sev-media,
+.task-card.done.sev-baja {
+  border-left-color: #198754;
+  background: rgba(25, 135, 84, .12);
+  opacity: .8;
+}
+.task-card.done .task-title-text { text-decoration: line-through; color: #8392a3; }
+.check-icon { color: #2ecc71; font-weight: 700; }
 
 .task-title { font-weight: 600; word-break: break-word; }
 .task-desc { color: #9aa7b5; font-size: .9rem; word-break: break-word; }

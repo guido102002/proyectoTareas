@@ -1,6 +1,10 @@
 (() => {
   'use strict';
 
+  
+  const taskManager = new TaskManager();
+  console.log(taskManager.tasks); 
+
   // ---------- Referencias al DOM ----------
   const form = document.getElementById('taskForm');
   const fields = {
@@ -25,12 +29,6 @@
   const CVE_REGEX = /^CVE-\d{4}-\d{4,}$/i;
   const SEV_LABEL = { critica: 'Crítica', alta: 'Alta', media: 'Media', baja: 'Baja' };
   const STATUS_LABEL = { pendiente: 'Pendiente', 'en-proceso': 'En proceso', finalizada: 'Finalizada' };
-  // Qué hace el botón principal de cada tarjeta según su estado actual
-  const NEXT_STEP = {
-    pendiente: { label: 'Iniciar', next: 'en-proceso', style: 'btn-outline-info' },
-    'en-proceso': { label: 'Completar', next: 'finalizada', style: 'btn-outline-success' },
-    finalizada: { label: 'Reabrir', next: 'pendiente', style: 'btn-outline-warning' }
-  };
 
   let tasks = loadTasks();
 
@@ -202,6 +200,14 @@
   }
   form.addEventListener('reset', () => setTimeout(clearValidation, 0));
 
+  // ---------- Tarea 4 · Parte 2: toggle completada / pendiente ----------
+  // Si la tarea está finalizada vuelve a "pendiente"; en cualquier otro caso pasa a "finalizada".
+  function toggleTaskStatus(task) {
+    task.status = task.status === 'finalizada' ? 'pendiente' : 'finalizada';
+    saveTasks();
+    render(); // actualiza tarjeta, badges y contadores sin recargar la página
+  }
+
   // ---------- Componente Tarjeta de Tarea (Tarea 2) ----------
   // Se construye con createElement/textContent (nunca innerHTML con datos del usuario)
   // para evitar inyección de HTML/XSS.
@@ -213,10 +219,15 @@
   }
 
   function createTaskCard(task) {
-    const card = el('article', `task-card sev-${task.priority}${task.status === 'finalizada' ? ' done' : ''}`);
+    const isDone = task.status === 'finalizada';
+    const card = el('article', `task-card sev-${task.priority}${isDone ? ' done' : ''}`);
 
     const top = el('div', 'd-flex justify-content-between align-items-start gap-2 mb-1');
-    top.appendChild(el('h3', 'h6 task-title mb-0', task.title));
+    const title = el('h3', 'h6 task-title mb-0');
+    if (isDone) title.appendChild(el('span', 'check-icon me-1', '✔')); // indicador de completada
+    title.appendChild(el('span', 'task-title-text', task.title));
+    top.appendChild(title);
+
     const badges = el('div', 'd-flex flex-wrap justify-content-end gap-1 flex-shrink-0');
     badges.appendChild(el('span', `badge badge-sev-${task.priority}`, SEV_LABEL[task.priority]));
     badges.appendChild(el('span', `badge badge-status-${task.status}`, STATUS_LABEL[task.status]));
@@ -231,15 +242,18 @@
     if (task.reference) meta.appendChild(el('span', 'ref-tag', task.reference));
     card.appendChild(meta);
 
-    const step = NEXT_STEP[task.status];
     const actions = el('div', 'd-flex gap-2');
-    const btnStep = el('button', `btn btn-sm ${step.style}`, step.label);
-    btnStep.type = 'button';
-    btnStep.addEventListener('click', () => {
-      task.status = step.next;
-      saveTasks();
-      render();
-    });
+
+    // Botón toggle: marcar / desmarcar
+    const btnToggle = el(
+      'button',
+      `btn btn-sm ${isDone ? 'btn-outline-warning' : 'btn-outline-success'}`,
+      isDone ? '↩ Desmarcar' : '✔ Marcar como completada'
+    );
+    btnToggle.type = 'button';
+    btnToggle.setAttribute('aria-pressed', String(isDone));
+    btnToggle.addEventListener('click', () => toggleTaskStatus(task));
+
     const btnDelete = el('button', 'btn btn-sm btn-outline-danger', 'Eliminar');
     btnDelete.type = 'button';
     btnDelete.addEventListener('click', () => {
@@ -247,7 +261,8 @@
       saveTasks();
       render();
     });
-    actions.append(btnStep, btnDelete);
+
+    actions.append(btnToggle, btnDelete);
     card.appendChild(actions);
 
     return card;
