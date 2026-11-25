@@ -1,9 +1,10 @@
 (() => {
   'use strict';
 
-  
+  // ---------- Instancia de TaskManager ----------
+  // taskManager.js se carga antes que este archivo, por eso la clase ya existe.
   const taskManager = new TaskManager();
-  console.log(taskManager.tasks); 
+  console.log(taskManager.tasks);
 
   // ---------- Referencias al DOM ----------
   const form = document.getElementById('taskForm');
@@ -21,55 +22,10 @@
   const formAlertTitle = document.getElementById('formAlertTitle');
   const formAlertList = document.getElementById('formAlertList');
   const taskList = document.getElementById('taskList');
-  const emptyState = document.getElementById('emptyState');
   const filter = document.getElementById('filter');
 
   // ---------- Constantes ----------
-  const STORAGE_KEY = 'sectask.tasks';
   const CVE_REGEX = /^CVE-\d{4}-\d{4,}$/i;
-  const SEV_LABEL = { critica: 'Crítica', alta: 'Alta', media: 'Media', baja: 'Baja' };
-  const STATUS_LABEL = { pendiente: 'Pendiente', 'en-proceso': 'En proceso', finalizada: 'Finalizada' };
-
-  let tasks = loadTasks();
-
-  // ---------- Datos de ejemplo (Tarea 2: cinco tarjetas) ----------
-  function getSampleTasks() {
-    const base = Date.now();
-    return [
-      { id: base + 1, title: 'Parchear Log4Shell en producción', description: 'Actualizar las librerías afectadas y validar con un escaneo posterior.', category: 'AppSec / DevSecOps', priority: 'critica', dueDate: '2026-11-12', reference: 'CVE-2021-44228', status: 'en-proceso' },
-      { id: base + 2, title: 'Triage de alertas del SIEM', description: 'Clasificar las alertas de las últimas 24 horas y escalar los incidentes confirmados.', category: 'Blue Team / SOC', priority: 'alta', dueDate: '2026-11-09', reference: '', status: 'pendiente' },
-      { id: base + 3, title: 'Pentest a la API de pagos', description: 'Probar autenticación, autorización y validación de entradas según OWASP API Top 10.', category: 'Pentesting / Red Team', priority: 'alta', dueDate: '2026-11-20', reference: '', status: 'pendiente' },
-      { id: base + 4, title: 'Informe de inteligencia de amenazas', description: 'Resumir las campañas de phishing del mes y sus indicadores de compromiso.', category: 'Threat Intelligence', priority: 'media', dueDate: '2026-11-15', reference: '', status: 'en-proceso' },
-      { id: base + 5, title: 'Revisar política de contraseñas', description: 'Comparar la política vigente con los controles ISO 27001 y proponer ajustes.', category: 'GRC / Cumplimiento', priority: 'baja', dueDate: '2026-11-30', reference: '', status: 'finalizada' }
-    ];
-  }
-
-  // ---------- Persistencia (localStorage) ----------
-  // Convierte tareas de versiones anteriores (campo "done") al campo "status".
-  function normalizeTask(t) {
-    const { done, ...rest } = t;
-    const status = STATUS_LABEL[rest.status] ? rest.status : (done ? 'finalizada' : 'pendiente');
-    return { ...rest, status };
-  }
-
-  function loadTasks() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw === null) {
-        // Primera visita: se cargan las cinco tareas de ejemplo
-        const sample = getSampleTasks();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sample));
-        return sample;
-      }
-      const data = JSON.parse(raw);
-      return Array.isArray(data) ? data.map(normalizeTask) : [];
-    } catch {
-      return getSampleTasks();
-    }
-  }
-  function saveTasks() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch { /* sin almacenamiento */ }
-  }
 
   // ---------- Utilidades ----------
   const todayISO = () => {
@@ -162,13 +118,11 @@
     input.addEventListener(eventName, () => validateLive(name));
   });
 
-  // ---------- Envío del formulario ----------
+  // ---------- Envío del formulario (agregar tarea) ----------
   form.addEventListener('submit', (e) => {
     e.preventDefault();
 
     const data = readFormData();
-    console.log('Datos del formulario:', data); // comprobación de lectura de campos
-
     const { valid, errors } = validFormFieldInput(data);
     FIELD_NAMES.forEach(name => paintField(name, errors));
 
@@ -179,8 +133,7 @@
     }
 
     hideAlert();
-    tasks.unshift({
-      id: Date.now(),
+    taskManager.addTask({
       title: data.title.trim(),
       description: data.description.trim(),
       category: data.category,
@@ -189,9 +142,9 @@
       dueDate: data.dueDate,
       reference: data.reference.trim().toUpperCase()
     });
-    saveTasks();
+    taskManager.save();
+    taskManager.render();
     resetForm();
-    render();
   });
 
   function resetForm() {
@@ -200,90 +153,31 @@
   }
   form.addEventListener('reset', () => setTimeout(clearValidation, 0));
 
-  // ---------- Tarea 4 · Parte 2: toggle completada / pendiente ----------
-  // Si la tarea está finalizada vuelve a "pendiente"; en cualquier otro caso pasa a "finalizada".
-  function toggleTaskStatus(task) {
-    task.status = task.status === 'finalizada' ? 'pendiente' : 'finalizada';
-    saveTasks();
-    render(); // actualiza tarjeta, badges y contadores sin recargar la página
-  }
+  // ---------- Listener de click de la Lista de Tareas ----------
+  // Un solo listener (delegación de eventos) para todos los botones de las tarjetas.
+  taskList.addEventListener('click', (event) => {
+    // Tarea 4 · Parte 2: marcar / desmarcar como completada
+    if (event.target.classList.contains('toggle-button')) {
+      const parentTask = event.target.closest('[data-task-id]');
+      const taskId = Number(parentTask.dataset.taskId);
+      taskManager.toggleTaskStatus(taskId);
+      taskManager.save();
+      taskManager.render();
+    }
 
-  // ---------- Componente Tarjeta de Tarea (Tarea 2) ----------
-  // Se construye con createElement/textContent (nunca innerHTML con datos del usuario)
-  // para evitar inyección de HTML/XSS.
-  function el(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
+    // Tarea 6: eliminar una tarea
+    if (event.target.classList.contains('delete-button')) {
+      const parentTask = event.target.closest('[data-task-id]'); // el <article> que tiene data-task-id
+      const taskId = Number(parentTask.dataset.taskId);          // el dataset llega como texto
+      taskManager.deleteTask(taskId);
+      taskManager.save();
+      taskManager.render();
+    }
+  });
 
-  function createTaskCard(task) {
-    const isDone = task.status === 'finalizada';
-    const card = el('article', `task-card sev-${task.priority}${isDone ? ' done' : ''}`);
+  // ---------- Filtro de la lista ----------
+  filter.addEventListener('change', () => taskManager.render());
 
-    const top = el('div', 'd-flex justify-content-between align-items-start gap-2 mb-1');
-    const title = el('h3', 'h6 task-title mb-0');
-    if (isDone) title.appendChild(el('span', 'check-icon me-1', '✔')); // indicador de completada
-    title.appendChild(el('span', 'task-title-text', task.title));
-    top.appendChild(title);
-
-    const badges = el('div', 'd-flex flex-wrap justify-content-end gap-1 flex-shrink-0');
-    badges.appendChild(el('span', `badge badge-sev-${task.priority}`, SEV_LABEL[task.priority]));
-    badges.appendChild(el('span', `badge badge-status-${task.status}`, STATUS_LABEL[task.status]));
-    top.appendChild(badges);
-    card.appendChild(top);
-
-    if (task.description) card.appendChild(el('p', 'task-desc mb-2', task.description));
-
-    const meta = el('div', 'task-meta d-flex flex-wrap gap-3 mb-3');
-    meta.appendChild(el('span', '', `🛡 ${task.category}`));
-    meta.appendChild(el('span', '', `⏱ ${task.dueDate}`));
-    if (task.reference) meta.appendChild(el('span', 'ref-tag', task.reference));
-    card.appendChild(meta);
-
-    const actions = el('div', 'd-flex gap-2');
-
-    // Botón toggle: marcar / desmarcar
-    const btnToggle = el(
-      'button',
-      `btn btn-sm ${isDone ? 'btn-outline-warning' : 'btn-outline-success'}`,
-      isDone ? '↩ Desmarcar' : '✔ Marcar como completada'
-    );
-    btnToggle.type = 'button';
-    btnToggle.setAttribute('aria-pressed', String(isDone));
-    btnToggle.addEventListener('click', () => toggleTaskStatus(task));
-
-    const btnDelete = el('button', 'btn btn-sm btn-outline-danger', 'Eliminar');
-    btnDelete.type = 'button';
-    btnDelete.addEventListener('click', () => {
-      tasks = tasks.filter(t => t.id !== task.id);
-      saveTasks();
-      render();
-    });
-
-    actions.append(btnToggle, btnDelete);
-    card.appendChild(actions);
-
-    return card;
-  }
-
-  // ---------- Render de la lista y los contadores ----------
-  filter.addEventListener('change', render);
-
-  function render() {
-    const mode = filter.value;
-    const visible = tasks.filter(t => mode === 'todas' || t.status === mode);
-
-    taskList.replaceChildren(...visible.map(createTaskCard));
-    emptyState.classList.toggle('d-none', visible.length > 0);
-
-    const count = (status) => tasks.filter(t => t.status === status).length;
-    document.getElementById('countTotal').textContent = tasks.length;
-    document.getElementById('countPending').textContent = count('pendiente');
-    document.getElementById('countProgress').textContent = count('en-proceso');
-    document.getElementById('countDone').textContent = count('finalizada');
-  }
-
-  render();
+  // ---------- Render inicial ----------
+  taskManager.render();
 })();
